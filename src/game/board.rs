@@ -118,6 +118,7 @@ impl Board {
             panic!("Found a Blank Slot where there should not have been one.");
         }
 
+        // traverse the board in all 8 directions
         let search_results = vec![
             self.recurse(slot, row_num, col, 1, Direction::North)
                 + self.recurse(slot, row_num, col, 1, Direction::South)

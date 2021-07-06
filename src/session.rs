@@ -21,11 +21,14 @@ pieces on a diagonal, column, or row.
 
 /// The state of a single game.
 pub struct Session {
+    /// The Board that the game is played on.
     pub board: Board,
+    /// The current Player.
     pub current_player: Player,
 }
 
 impl Session {
+    /// Initialize a new Session with a 7x7 Board.
     pub fn new() -> Self {
         Session {
             board: Board::new(7, 7),
@@ -33,6 +36,7 @@ impl Session {
         }
     }
 
+    /// Execute a single turn of the game.
     pub fn run(&mut self) -> Result<(), GameError> {
         println!("{}", WELCOME);
 
@@ -45,21 +49,19 @@ impl Session {
                 .flush()
                 .map_err(|e| GameError::InputError { source: e })?;
 
-            let mut command = String::new();
+            let mut input = String::new();
             io::stdin()
-                .read_line(&mut command)
+                .read_line(&mut input)
                 .map_err(|e| GameError::InputError { source: e })?;
 
-            // parse the command into a Move type
-            let mov = match Move::try_from(command) {
+            // parse the input into a Move
+            let mov = match Move::try_from(input) {
                 Ok(mov) => mov,
                 Err(e) => {
                     println!("{}", e);
                     continue;
                 }
             };
-
-            dbg!(&mov);
 
             let slot = match self.current_player {
                 Player::First => Slot::X,

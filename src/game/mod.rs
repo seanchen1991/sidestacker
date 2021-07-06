@@ -78,6 +78,7 @@ impl TryFrom<String> for Move {
     }
 }
 
+/// A Row of the Board.
 #[derive(Debug)]
 pub struct Row(Vec<Slot>);
 
@@ -94,14 +95,17 @@ impl fmt::Display for Row {
 }
 
 impl Row {
+    /// Get the length of the Row.
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Returns whether the Row contains no Blank Slots.
     pub fn is_full(&self) -> bool {
         self.0.iter().all(|slot| *slot != Slot::Blank)
     }
 
+    /// Get the Slot at the given column index in the Row.
     pub fn get(&self, col: usize) -> &Slot {
         &self.0[col]
     }
