@@ -1,6 +1,6 @@
-use std::io;
-use std::fmt;
 use std::error::Error;
+use std::fmt;
+use std::io;
 
 /// The error types that may arise while the game is running.
 #[derive(Debug)]
@@ -14,7 +14,7 @@ pub enum GameError {
     /// A player specified a side that is not valid.
     InvalidSide,
     /// There was an error reading or writing input.
-    InputError { source: io::Error }
+    InputError { source: io::Error },
 }
 
 impl fmt::Display for GameError {

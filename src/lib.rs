@@ -5,8 +5,8 @@ use structopt::StructOpt;
 use error::GameError;
 use session::Session;
 
-mod board;
 mod error;
+mod game;
 mod session;
 
 #[derive(StructOpt, Debug)]
@@ -28,7 +28,7 @@ pub struct Params {
 }
 
 /// The Player variants.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Player {
     /// Player 1
     First,
