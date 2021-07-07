@@ -10,6 +10,8 @@ mod error;
 pub mod game;
 pub mod session;
 
+static DB_PATH: &str = "db/games.db";
+
 #[derive(StructOpt, Debug)]
 #[structopt(name = "sidestacker")]
 pub enum SideStacker {
@@ -58,7 +60,7 @@ impl fmt::Display for Player {
 }
 
 pub fn init_db() -> Result<Connection, GameError> {
-    let connection = Connection::open_in_memory()?;
+    let connection = Connection::open(DB_PATH)?;
 
     connection.execute(
         "CREATE TABLE games (

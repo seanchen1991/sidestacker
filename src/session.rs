@@ -37,6 +37,12 @@ impl fmt::Display for Turns {
     }
 }
 
+impl Turns {
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
 /// The state of a single game.
 pub struct Session {
     /// The Board that the game is played on.
@@ -78,6 +84,12 @@ impl Session {
         println!("{}", WELCOME);
 
         loop {
+            // Check if the game has resulted in a tie
+            if self.turns.len() == self.board.height * self.board.width {
+                println!("Game ended in a tie!");
+                break;
+            }
+
             println!("{}", self.board);
             println!("{} player's turn:", self.current_player);
             println!("What's the move?");
