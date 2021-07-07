@@ -1,11 +1,11 @@
 use std::fmt;
 
+use rusqlite::Connection;
 use structopt::StructOpt;
 
 use error::GameError;
 use session::Session;
 
-pub mod config;
 mod error;
 pub mod game;
 pub mod session;
@@ -57,6 +57,20 @@ impl fmt::Display for Player {
     }
 }
 
+pub fn init_db() -> Result<Connection, GameError> {
+    let connection = Connection::open_in_memory()?;
+
+    connection.execute(
+        "CREATE TABLE games (
+            id INTEGER PRIMARY KEY,
+            turns TEXT NOT NULL
+        )",
+        [],
+    )?;
+
+    Ok(connection)
+}
+
 /// Grabs CLI args and either creates a new game or connects to a pre-existing one.
 pub fn init() -> Result<Session, GameError> {
     // let session = match SideStacker::from_args() {
@@ -64,5 +78,5 @@ pub fn init() -> Result<Session, GameError> {
     //     SideStacker::Connect(params) => Session::connect(params),
     // };
 
-    Ok(Session::new())
+    Session::try_new()
 }

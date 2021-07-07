@@ -14,7 +14,6 @@ name = "sidestacker"
 path = "src/lib.rs"
 
 [dependencies]
-config = "*"
+rusqlite = "*"
 serde = { version = "*", features = ["derive"] }
-sqlx = { version = "*", default-features = false, features = ["runtime-actix-rustls", "macros", "postgres", "uuid", "migrate"] }
 structopt = "*"

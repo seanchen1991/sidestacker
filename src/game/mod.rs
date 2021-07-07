@@ -85,7 +85,7 @@ impl TryFrom<String> for Move {
 
         Ok(Self { row, side })
     }
-}
+} 
 
 impl fmt::Display for Move {
    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

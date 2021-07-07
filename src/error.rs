@@ -15,6 +15,8 @@ pub enum GameError {
     InvalidSide,
     /// There was an error reading or writing input.
     InputError { source: io::Error },
+    /// An error occurred with the database.
+    DatabaseError { source: rusqlite::Error },
 }
 
 impl fmt::Display for GameError {
@@ -25,6 +27,7 @@ impl fmt::Display for GameError {
             GameError::InputError { source } => write!(f, "There was an error reading/writing input: {}", source),
             GameError::InvalidMoveFormat => write!(f, "Please specify your move with a number indicating the row and a letter indicating the side ('l' or 'r'), with no spaces in between them."),
             GameError::InvalidSide => write!(f, "Please specify a side with a letter, 'l' or 'r'."),
+            GameError::DatabaseError { source } => write!(f, "An error occurred with the database: {}", source),
         }
     }
 }
@@ -35,10 +38,17 @@ impl From<io::Error> for GameError {
     }
 }
 
+impl From<rusqlite::Error> for GameError {
+    fn from(source: rusqlite::Error) -> Self {
+        Self::DatabaseError { source }
+    }
+}
+
 impl Error for GameError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::InputError { source } => Some(source),
+            Self::DatabaseError { source } => Some(source),
             _ => None,
         }
     }
