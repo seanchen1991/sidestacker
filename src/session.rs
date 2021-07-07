@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use std::fmt;
 use std::io::{self, prelude::*};
 
 use crate::{
@@ -19,12 +20,28 @@ available, or when a player has four consecutive
 pieces on a diagonal, column, or row.
 ";
 
+/// Stores the Moves made by both Players in order.
+#[derive(Debug)]
+pub struct Turns(Vec<Move>);
+
+impl fmt::Display for Turns {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for mov in self.0.iter() {
+            write!(f, "{}\n", mov)?;
+        }
+
+        Ok(())
+    }
+}
+
 /// The state of a single game.
 pub struct Session {
     /// The Board that the game is played on.
     pub board: Board,
     /// The current Player.
     pub current_player: Player,
+    /// The turns that have occurred over the course of the game.
+    pub turns: Turns,
 }
 
 impl Session {
@@ -33,6 +50,7 @@ impl Session {
         Session {
             board: Board::new(7, 7),
             current_player: Player::First,
+            turns: Turns(Vec::new()),
         }
     }
 
@@ -53,6 +71,10 @@ impl Session {
             io::stdin()
                 .read_line(&mut input)
                 .map_err(|e| GameError::InputError { source: e })?;
+
+            if input.trim().to_lowercase() == "quit" {
+                break;
+            }
 
             // parse the input into a Move
             let mov = match Move::try_from(input) {
@@ -85,6 +107,9 @@ impl Session {
                     Ok((row, col)) => (row, col),
                 },
             };
+
+            // log the turn 
+            self.turns.0.push(mov);
 
             // check if the game is over
             match self.board.is_game_over(row, col, &slot) {

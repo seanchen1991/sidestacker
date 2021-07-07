@@ -5,9 +5,10 @@ use structopt::StructOpt;
 use error::GameError;
 use session::Session;
 
+pub mod config;
 mod error;
-mod game;
-mod session;
+pub mod game;
+pub mod session;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "sidestacker")]

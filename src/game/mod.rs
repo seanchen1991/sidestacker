@@ -33,6 +33,15 @@ pub enum Side {
     Right,
 }
 
+impl fmt::Display for Side {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Side::Left => write!(f, "L"),
+            Side::Right => write!(f, "R"),
+        }
+    }
+}
+
 /// The directions in which a 4-length sequence of Slots constitutes a win.
 #[derive(Debug)]
 pub enum Direction {
@@ -76,6 +85,12 @@ impl TryFrom<String> for Move {
 
         Ok(Self { row, side })
     }
+}
+
+impl fmt::Display for Move {
+   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({}{})", self.row, self.side)
+   }
 }
 
 /// A Row of the Board.
