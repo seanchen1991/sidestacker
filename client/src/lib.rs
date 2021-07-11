@@ -1,4 +1,5 @@
 use std::fmt;
+use std::net::{SocketAddr, TcpStream};
 
 use rusqlite::Connection;
 use structopt::StructOpt;
@@ -15,8 +16,6 @@ static DB_PATH: &str = "db/games.db";
 #[derive(StructOpt, Debug)]
 #[structopt(name = "sidestacker")]
 pub enum SideStacker {
-    /// Create a new SideStacker Session
-    Create(Params),
     /// Connect to a SideStacker Session
     Connect(Params),
 }
@@ -24,10 +23,8 @@ pub enum SideStacker {
 #[derive(StructOpt, Debug)]
 #[structopt(about = "SideStacker parameters")]
 pub struct Params {
-    #[structopt(short, long, default_value = "0.0.0.0")]
-    address: String,
-    #[structopt(short, long, default_value = "8080")]
-    port: u32,
+    #[structopt(short, long, default_value = "0.0.0.0:8080")]
+    address: SocketAddr,
 }
 
 /// The Player variants.
@@ -75,10 +72,12 @@ pub fn init_db() -> Result<Connection, GameError> {
 
 /// Grabs CLI args and either creates a new game or connects to a pre-existing one.
 pub fn init() -> Result<Session, GameError> {
-    // let session = match SideStacker::from_args() {
-    //     SideStacker::Create(params) => Session::new(params),
-    //     SideStacker::Connect(params) => Session::connect(params),
-    // };
+    let SideStacker::Connect(params) = SideStacker::from_args(); 
 
-    Session::try_new()
+    let stream = match TcpStream::connect(params.address) {
+        Ok(stream) => stream,
+        Err(e) => return Err(GameError::ConnectionError(e.to_string())),
+    };
+
+    Ok(Session::new(stream))
 }

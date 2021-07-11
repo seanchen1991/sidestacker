@@ -17,6 +17,8 @@ pub enum GameError {
     InputError { source: io::Error },
     /// An error occurred with the database.
     DatabaseError { source: rusqlite::Error },
+    /// An error occurred with the connection.
+    ConnectionError(String),
 }
 
 impl fmt::Display for GameError {
@@ -28,6 +30,7 @@ impl fmt::Display for GameError {
             GameError::InvalidMoveFormat => write!(f, "Please specify your move with a number indicating the row and a letter indicating the side ('l' or 'r'), with no spaces in between them."),
             GameError::InvalidSide => write!(f, "Please specify a side with a letter, 'l' or 'r'."),
             GameError::DatabaseError { source } => write!(f, "An error occurred with the database: {}", source),
+            GameError::ConnectionError(s) => write!(f, "A connection error occurred: {}", s),
         }
     }
 }
@@ -49,6 +52,7 @@ impl Error for GameError {
         match self {
             Self::InputError { source } => Some(source),
             Self::DatabaseError { source } => Some(source),
+            Self::ConnectionError { source } => Some(source),
             _ => None,
         }
     }

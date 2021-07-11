@@ -1,8 +1,7 @@
 use std::convert::TryFrom;
 use std::fmt;
 use std::io::{self, prelude::*};
-
-use rusqlite::Connection;
+use std::net::TcpStream;
 
 use crate::{
     error::GameError,
@@ -51,36 +50,50 @@ pub struct Session {
     pub current_player: Player,
     /// The turns that have occurred over the course of the game.
     pub turns: Turns,
-    /// Connection to the database.
-    database_connection: Connection,
+    /// The stream for communicating with the server.
+    pub stream: TcpStream,
 }
 
 impl Session {
     /// Initialize a new Session with a 7x7 Board.
-    pub fn try_new() -> Result<Self, GameError> {
-        let connection = init_db()?;
-
-        Ok(Session {
+    pub fn new(stream: TcpStream) -> Self {
+        Session {
             board: Board::new(7, 7),
             current_player: Player::First,
             turns: Turns(Vec::new()),
-            database_connection: connection,
-        })
+            stream,
+        }
     }
 
     /// Persists the turns of the game to the database.
-    pub fn save_game(&self) -> Result<(), GameError> {
-        self.database_connection
-            .execute(
-                "INSERT INTO games (turns) values (?1)",
-                &[&self.turns.to_string()]
-            )?;
+    // pub fn save_game(&self) -> Result<(), GameError> {
+    //     self.database_connection
+    //         .execute(
+    //             "INSERT INTO games (turns) values (?1)",
+    //             &[&self.turns.to_string()]
+    //         )?;
 
-        Ok(())
+    //     Ok(())
+    // }
+
+    /// Start the game if all Players are ready, or wait for more
+    /// Players to connect.
+    pub fn run(&mut self) -> Result<(), GameError> {
+        let mut buffer = vec![0 as u8; 256];
+
+        loop {
+            while let Ok(bytes_read) = self.stream.read(&mut buffer) {
+                if bytes_read == 0 {
+                    return Err(GameError::ConnectionError("Received no response from server.".to_string()));
+                }
+
+                
+            }
+        }
     }
 
     /// Execute a single turn of the game.
-    pub fn run(&mut self) -> Result<(), GameError> {
+    pub fn play(&mut self) -> Result<(), GameError> {
         println!("{}", WELCOME);
 
         loop {
