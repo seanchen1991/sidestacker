@@ -34,6 +34,12 @@ pub enum Server {
 /// CLI Params that the server accepts from the user.
 #[derive(Debug, StructOpt)]
 pub struct Params {
+    /// The height of the game board.
+    #[structopt(short, long, default_value = "7")]
+    pub height: usize,
+    /// The width of the game board.
+    #[structopt(short, long, default_value = "7")]
+    pub width: usize,
     /// The Address for the server to listen on.
     #[structopt(short, long, default_value = "0.0.0.0:8080")]
     pub addr: SocketAddr,
@@ -58,6 +64,7 @@ impl std::ops::Not for Player {
     }
 }
 
+// TODO: Make this a `try_from`
 impl From<u32> for Player {
     fn from(n: u32) -> Self {
         if n == 1 {
@@ -102,8 +109,8 @@ pub enum Request {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Response {
     /// There is enough capacity in the game. Tell the client which
-    /// Player they are.
-    Welcome { player: Player },
+    /// Player they are and the size of the board.
+    Welcome { player: Player, height: usize, width: usize },
     /// There are enough Players for the game to start.
     GameStart,
     /// There is not enough capacity in the game.
@@ -130,11 +137,15 @@ pub struct Shared {
     pub current_player: Player,
     /// The Turns taken by the Players over the course of a game.
     pub turns: Vec<Turn>,
+    /// The height of the game board.
+    pub height: usize,
+    /// The width of the game board.
+    pub width: usize,
 }
 
 impl Shared {
     /// Attempt to create a new `Shared` instance.
-    pub fn try_new() -> Result<Self, ServerError> {
+    pub fn try_new(height: usize, width: usize) -> Result<Self, ServerError> {
         let db_connection = init_db()?;
 
         Ok(Shared {
@@ -142,6 +153,8 @@ impl Shared {
             players: HashMap::new(),
             current_player: Player::First,
             turns: Vec::new(),
+            height,
+            width,
         })
     }
 
@@ -205,10 +218,12 @@ impl Peer {
         }
 
         state.players.insert(addr, tx);
+        let height = state.height;
+        let width = state.width;
 
         let player = Player::from(num_players);
         lines
-            .send(serde_json::to_string(&Response::Welcome { player })?)
+            .send(serde_json::to_string(&Response::Welcome { player, height, width })?)
             .await?;
 
         Ok(Some(Peer {

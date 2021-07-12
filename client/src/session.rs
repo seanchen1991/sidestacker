@@ -4,9 +4,9 @@ use std::io::{self, prelude::*};
 use std::net::TcpStream;
 
 use crate::{
+    Move, Side,
     error::GameError,
-    game::{board::Board, Move, Side, Slot},
-    init_db,
+    game::{board::Board, Slot},
     Player,
 };
 
@@ -62,33 +62,6 @@ impl Session {
             current_player: Player::First,
             turns: Turns(Vec::new()),
             stream,
-        }
-    }
-
-    /// Persists the turns of the game to the database.
-    // pub fn save_game(&self) -> Result<(), GameError> {
-    //     self.database_connection
-    //         .execute(
-    //             "INSERT INTO games (turns) values (?1)",
-    //             &[&self.turns.to_string()]
-    //         )?;
-
-    //     Ok(())
-    // }
-
-    /// Start the game if all Players are ready, or wait for more
-    /// Players to connect.
-    pub fn run(&mut self) -> Result<(), GameError> {
-        let mut buffer = vec![0 as u8; 256];
-
-        loop {
-            while let Ok(bytes_read) = self.stream.read(&mut buffer) {
-                if bytes_read == 0 {
-                    return Err(GameError::ConnectionError("Received no response from server.".to_string()));
-                }
-
-                
-            }
         }
     }
 
@@ -182,13 +155,5 @@ impl Session {
         }
 
         Ok(())
-    }
-}
-
-impl Drop for Session {
-    fn drop(&mut self) {
-        println!("Saving game to database...");
-
-        self.save_game().expect("Error: Failed to persist game.");
     }
 }

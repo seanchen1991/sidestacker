@@ -4,15 +4,20 @@ use structopt::StructOpt;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 
-use server::{error::ServerError, process, Server, Shared};
+use server::{error::ServerError, process, Params, Server, Shared};
 
 #[tokio::main]
 async fn main() -> Result<(), ServerError> {
-    let state = Arc::new(Mutex::new(Shared::try_new()?));
-    let Server::Start(params) = Server::from_args();
-    let listener = TcpListener::bind(&params.addr).await?;
+    let Server::Start(Params {
+        height,
+        width,
+        addr,
+    }) = Server::from_args();
 
-    println!("Server running on {}", params.addr);
+    let state = Arc::new(Mutex::new(Shared::try_new(height, width)?));
+    let listener = TcpListener::bind(&addr).await?;
+
+    println!("Server running on {}", addr);
 
     loop {
         let (stream, addr) = listener.accept().await?;
