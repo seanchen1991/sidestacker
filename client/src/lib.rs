@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use std::fmt;
 use std::net::SocketAddr;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 use tokio::net::TcpStream;
 use tokio_util::codec::{Framed, LinesCodec};
@@ -29,7 +29,7 @@ pub enum Client {
 #[structopt(about = "Client parameters")]
 pub struct Params {
     #[structopt(short, long, default_value = "0.0.0.0:8080")]
-    addr: SocketAddr,
+    pub addr: SocketAddr,
 }
 
 /// The Player variants.
@@ -107,12 +107,12 @@ impl TryFrom<String> for Move {
 
         Ok(Self { row, side })
     }
-} 
+}
 
 impl fmt::Display for Move {
-   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({}{})", self.row, self.side)
-   }
+    }
 }
 
 /// A Player's turn.
@@ -136,7 +136,11 @@ pub enum Request {
 pub enum Response {
     /// There is enough capacity in the game. Tell the client which
     /// Player they are.
-    Welcome { player: Player, height: usize, width: usize },
+    Welcome {
+        player: Player,
+        height: usize,
+        width: usize,
+    },
     /// There are enough Players for the game to start.
     GameStart,
     /// There is not enough capacity in the game.
@@ -160,7 +164,10 @@ pub struct Connection {
     pub lines: Framed<TcpStream, LinesCodec>,
 }
 
-pub async fn process(mut session: Session, mut connection: Connection) -> Result<(), ClientError> {
+pub async fn process(
+    session: &mut Session,
+    connection: &mut Connection,
+) -> Result<(), ClientError> {
     // wait for the `GameStart` response from the server
     loop {
         match connection.lines.next().await {
@@ -170,12 +177,12 @@ pub async fn process(mut session: Session, mut connection: Connection) -> Result
                 if let Response::GameStart = response {
                     break;
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 
-    // the response arrived, we can start the game now 
+    // the response arrived, we can start the game now
     session.play(connection).await?;
 
     Ok(())

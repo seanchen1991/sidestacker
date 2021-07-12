@@ -110,7 +110,11 @@ pub enum Request {
 pub enum Response {
     /// There is enough capacity in the game. Tell the client which
     /// Player they are and the size of the board.
-    Welcome { player: Player, height: usize, width: usize },
+    Welcome {
+        player: Player,
+        height: usize,
+        width: usize,
+    },
     /// There are enough Players for the game to start.
     GameStart,
     /// There is not enough capacity in the game.
@@ -222,7 +226,11 @@ impl Peer {
         let (height, width) = (state.height, state.width);
         let player = Player::from(num_players);
         lines
-            .send(serde_json::to_string(&Response::Welcome { player, height, width })?)
+            .send(serde_json::to_string(&Response::Welcome {
+                player,
+                height,
+                width,
+            })?)
             .await?;
 
         Ok(Some(Peer {

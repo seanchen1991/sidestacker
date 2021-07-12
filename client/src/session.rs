@@ -3,10 +3,9 @@ use std::convert::TryFrom;
 use std::io::{self, prelude::*};
 
 use crate::{
-    Connection, Move, Side, Turn,
     error::ClientError,
     game::{board::Board, Slot},
-    Player, Response,
+    Connection, Move, Player, Response, Side, Turn,
 };
 
 static WELCOME: &str = "Welcome to SideStacker!
@@ -45,7 +44,7 @@ impl Session {
     }
 
     /// Run the game loop.
-    pub async fn play(&mut self, mut connection: Connection) -> Result<(), ClientError> {
+    pub async fn play(&mut self, connection: &mut Connection) -> Result<(), ClientError> {
         println!("{}", WELCOME);
 
         loop {
@@ -81,19 +80,25 @@ impl Session {
                 }
             };
 
-            let turn = Turn { source: self.player, mov };
-            connection.lines.send(&serde_json::to_string(&turn)?).await?;
+            let turn = Turn {
+                source: self.player,
+                mov,
+            };
+            connection
+                .lines
+                .send(&serde_json::to_string(&turn)?)
+                .await?;
 
             loop {
                 match connection.lines.next().await {
                     Some(Ok(ref resp)) => {
                         let response: Response = serde_json::from_str(&resp)?;
-        
+
                         if let Response::Acknowledged = response {
                             break;
                         }
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
             }
 
@@ -119,7 +124,7 @@ impl Session {
                     Ok((row, col)) => (row, col),
                 },
             };
-    
+
             self.turns.push(turn);
 
             // check if the game is over
