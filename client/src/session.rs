@@ -1,13 +1,12 @@
+use futures::{sink::SinkExt, StreamExt};
 use std::convert::TryFrom;
-use std::fmt;
 use std::io::{self, prelude::*};
-use std::net::TcpStream;
 
 use crate::{
-    Move, Side,
-    error::GameError,
+    Connection, Move, Side, Turn,
+    error::ClientError,
     game::{board::Board, Slot},
-    Player,
+    Player, Response,
 };
 
 static WELCOME: &str = "Welcome to SideStacker!
@@ -22,51 +21,31 @@ available, or when a player has four consecutive
 pieces on a diagonal, column, or row.
 ";
 
-/// Stores the Moves made by both Players in order.
-#[derive(Debug)]
-pub struct Turns(Vec<Move>);
-
-impl fmt::Display for Turns {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for mov in self.0.iter() {
-            write!(f, "{}\n", mov)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl Turns {
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-}
-
-/// The state of a single game.
+/// The client's view of the game.
 pub struct Session {
     /// The Board that the game is played on.
     pub board: Board,
-    /// The current Player.
+    /// The Player on this client.
+    pub player: Player,
+    /// The Player whose turn it currently is.
     pub current_player: Player,
     /// The turns that have occurred over the course of the game.
-    pub turns: Turns,
-    /// The stream for communicating with the server.
-    pub stream: TcpStream,
+    pub turns: Vec<Turn>,
 }
 
 impl Session {
-    /// Initialize a new Session with a 7x7 Board.
-    pub fn new(stream: TcpStream) -> Self {
+    /// Initialize a new Session with a Board of the specified dimensions.
+    pub fn new(player: Player, height: usize, width: usize) -> Self {
         Session {
-            board: Board::new(7, 7),
+            board: Board::new(height, width),
+            turns: Vec::new(),
+            player,
             current_player: Player::First,
-            turns: Turns(Vec::new()),
-            stream,
         }
     }
 
-    /// Execute a single turn of the game.
-    pub fn play(&mut self) -> Result<(), GameError> {
+    /// Run the game loop.
+    pub async fn play(&mut self, mut connection: Connection) -> Result<(), ClientError> {
         println!("{}", WELCOME);
 
         loop {
@@ -82,12 +61,12 @@ impl Session {
 
             io::stdout()
                 .flush()
-                .map_err(|e| GameError::InputError { source: e })?;
+                .map_err(|e| ClientError::InputError { source: e })?;
 
             let mut input = String::new();
             io::stdin()
                 .read_line(&mut input)
-                .map_err(|e| GameError::InputError { source: e })?;
+                .map_err(|e| ClientError::InputError { source: e })?;
 
             if input.trim().to_lowercase() == "quit" {
                 break;
@@ -101,6 +80,22 @@ impl Session {
                     continue;
                 }
             };
+
+            let turn = Turn { source: self.player, mov };
+            connection.lines.send(&serde_json::to_string(&turn)?).await?;
+
+            loop {
+                match connection.lines.next().await {
+                    Some(Ok(ref resp)) => {
+                        let response: Response = serde_json::from_str(&resp)?;
+        
+                        if let Response::Acknowledged = response {
+                            break;
+                        }
+                    },
+                    _ => {},
+                }
+            }
 
             let slot = match self.current_player {
                 Player::First => Slot::X,
@@ -124,9 +119,8 @@ impl Session {
                     Ok((row, col)) => (row, col),
                 },
             };
-
-            // log the turn 
-            self.turns.0.push(mov);
+    
+            self.turns.push(turn);
 
             // check if the game is over
             match self.board.is_game_over(row, col, &slot) {

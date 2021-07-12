@@ -1,7 +1,7 @@
 use std::fmt;
 
 use super::*;
-use crate::error::GameError;
+use crate::error::ClientError;
 
 /// Represents the game board.
 #[derive(Debug)]
@@ -34,22 +34,22 @@ impl Board {
     }
 
     /// Try to fetch a reference to a specified Row.
-    pub fn try_get_row(&self, row_index: usize) -> Result<&Row, GameError> {
+    pub fn try_get_row(&self, row_index: usize) -> Result<&Row, ClientError> {
         let row = if let Some(row) = self.rows.get(row_index) {
             row
         } else {
-            return Err(GameError::NonexistentRow);
+            return Err(ClientError::NonexistentRow);
         };
 
         Ok(row)
     }
 
     /// Try to fetch a mutable reference to a specified Row.
-    pub fn try_get_row_mut(&mut self, row_index: usize) -> Result<&mut Row, GameError> {
+    pub fn try_get_row_mut(&mut self, row_index: usize) -> Result<&mut Row, ClientError> {
         let row = if let Some(row) = self.rows.get_mut(row_index) {
             row
         } else {
-            return Err(GameError::NonexistentRow);
+            return Err(ClientError::NonexistentRow);
         };
 
         Ok(row)
@@ -61,24 +61,20 @@ impl Board {
         &mut self,
         row_num: usize,
         slot: Slot,
-    ) -> Result<(usize, usize), GameError> {
+    ) -> Result<(usize, usize), ClientError> {
         let row = self.try_get_row_mut(row_num)?;
 
-        if row.is_full() {
-            return Err(GameError::FullRow);
-        }
-
-        for (col, spot) in row.0.iter_mut().rev().enumerate() {
+        for (col, mut spot) in row.0.iter().rev().enumerate() {
             match spot {
                 Slot::Blank => {
-                    *spot = slot;
+                    spot = &slot;
                     return Ok((row_num, row.len() - col - 1));
                 }
                 _ => continue,
             }
         }
 
-        Err(GameError::FullRow)
+        Err(ClientError::FullRow)
     }
 
     /// Insert the given Slot into the specified Row from the right.
@@ -87,24 +83,20 @@ impl Board {
         &mut self,
         row_num: usize,
         slot: Slot,
-    ) -> Result<(usize, usize), GameError> {
+    ) -> Result<(usize, usize), ClientError> {
         let row = self.try_get_row_mut(row_num)?;
 
-        if row.is_full() {
-            return Err(GameError::FullRow);
-        }
-
-        for (col, spot) in row.0.iter_mut().enumerate() {
+        for (col, mut spot) in row.0.iter().enumerate() {
             match spot {
                 Slot::Blank => {
-                    *spot = slot;
+                    spot = &slot;
                     return Ok((row_num, col));
                 }
                 _ => continue,
             }
         }
 
-        Err(GameError::FullRow)
+        Err(ClientError::FullRow)
     }
 
     /// Computes whether the game is finished or not, starting at the given row and column index.
@@ -113,7 +105,7 @@ impl Board {
         row_num: usize,
         col: usize,
         slot: &Slot,
-    ) -> Result<Option<Slot>, GameError> {
+    ) -> Result<Option<Slot>, ClientError> {
         if let Slot::Blank = slot {
             panic!("Found a Blank Slot where there should not have been one.");
         }

@@ -218,9 +218,8 @@ impl Peer {
         }
 
         state.players.insert(addr, tx);
-        let height = state.height;
-        let width = state.width;
 
+        let (height, width) = (state.height, state.width);
         let player = Player::from(num_players);
         lines
             .send(serde_json::to_string(&Response::Welcome { player, height, width })?)

@@ -1,29 +1,35 @@
+use futures::StreamExt;
 use std::convert::TryFrom;
 use std::fmt;
-use std::net::{SocketAddr, TcpStream};
+use std::net::SocketAddr;
 
 use serde::{Serialize, Deserialize};
 use structopt::StructOpt;
+use tokio::net::TcpStream;
+use tokio_util::codec::{Framed, LinesCodec};
 
-use error::GameError;
+use error::ClientError;
 use session::Session;
 
-mod error;
+pub mod error;
 pub mod game;
 pub mod session;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "sidestacker")]
-pub enum SideStacker {
+#[structopt(
+    name = "sidestacker-client",
+    about = "Client for players to interact with the game."
+)]
+pub enum Client {
     /// Connect to a SideStacker Session
     Connect(Params),
 }
 
 #[derive(StructOpt, Debug)]
-#[structopt(about = "SideStacker parameters")]
+#[structopt(about = "Client parameters")]
 pub struct Params {
     #[structopt(short, long, default_value = "0.0.0.0:8080")]
-    address: SocketAddr,
+    addr: SocketAddr,
 }
 
 /// The Player variants.
@@ -79,24 +85,24 @@ pub struct Move {
 }
 
 impl TryFrom<String> for Move {
-    type Error = GameError;
+    type Error = ClientError;
 
     fn try_from(command: String) -> Result<Self, Self::Error> {
         let chars = command.trim().chars().collect::<Vec<_>>();
 
         if chars.len() != 2 {
-            return Err(GameError::InvalidMoveFormat);
+            return Err(ClientError::InvalidMoveFormat);
         }
 
         let row = match chars[0].to_digit(10) {
             Some(num) => num as usize,
-            None => return Err(GameError::NonexistentRow),
+            None => return Err(ClientError::NonexistentRow),
         };
 
         let side = match chars[1] {
             'l' | 'L' => Side::Left,
             'r' | 'R' => Side::Right,
-            _ => return Err(GameError::InvalidSide),
+            _ => return Err(ClientError::InvalidSide),
         };
 
         Ok(Self { row, side })
@@ -130,7 +136,7 @@ pub enum Request {
 pub enum Response {
     /// There is enough capacity in the game. Tell the client which
     /// Player they are.
-    Welcome { player: Player },
+    Welcome { player: Player, height: usize, width: usize },
     /// There are enough Players for the game to start.
     GameStart,
     /// There is not enough capacity in the game.
@@ -147,18 +153,30 @@ pub enum Response {
     ServerError,
 }
 
-/// Grabs CLI args and either creates a new game or connects to a pre-existing one.
-pub fn init() -> Result<Session, GameError> {
-    let SideStacker::Connect(params) = SideStacker::from_args(); 
+/// The connection between the client and server.
+#[derive(Debug)]
+pub struct Connection {
+    /// Receive messages from the server as lines.
+    pub lines: Framed<TcpStream, LinesCodec>,
+}
 
-    let stream = match TcpStream::connect(params.address) {
-        Ok(stream) => stream,
-        Err(_) => return Err(GameError::ServerError),
-    };
+pub async fn process(mut session: Session, mut connection: Connection) -> Result<(), ClientError> {
+    // wait for the `GameStart` response from the server
+    loop {
+        match connection.lines.next().await {
+            Some(Ok(ref resp)) => {
+                let response: Response = serde_json::from_str(&resp)?;
 
-    // receive the server's response
-    // if it is a `GameReady` response of `Player 2` response, then 
-    // create the Session
+                if let Response::GameStart = response {
+                    break;
+                }
+            },
+            _ => {},
+        }
+    }
 
-    Ok(Session::new(stream))
+    // the response arrived, we can start the game now 
+    session.play(connection).await?;
+
+    Ok(())
 }
